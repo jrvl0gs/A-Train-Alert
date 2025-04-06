@@ -17,7 +17,7 @@ WALK_BUFFER_MINUTES = 5
 
 # Pushover config
 PUSHOVER_USER_KEY = os.getenv("PUSHOVER_USER_KEY")
-PUSHOVER_API_TOKEN = "uQTpK2SuT2qUvU9uWyYVLr3W2h1Nnx"  # Default public app token from Pushover for personal use
+PUSHOVER_API_TOKEN = os.getenv("PUSHOVER_API_TOKEN")
 
 def fetch_gtfs_feed():
     url = "https://api-endpoint.mta.info/Dataservice/mtagtfsfeeds/nyct%2Fgtfs-ace"
