@@ -6,6 +6,8 @@ from google.transit import gtfs_realtime_pb2
 # CONFIG
 STOP_ID = "A28S"  # 34th St–Penn Station (southbound)
 TARGET_ROUTE = "A"
+TARGET_ARRIVAL_TIME = datetime.time(hour=9, minute=30)  # 9:30 AM
+WALK_BUFFER_MINUTES = 5
 
 def fetch_gtfs_feed():
     url = "https://api-endpoint.mta.info/Dataservice/mtagtfsfeeds/nyct%2Fgtfs-ace"
@@ -34,10 +36,26 @@ def get_arrival_times(feed):
 
     return sorted(arrivals)
 
+def find_closest_train(arrivals, target_time):
+    today = datetime.datetime.now(pytz.timezone("America/New_York")).date()
+    target_dt = datetime.datetime.combine(today, target_time, tzinfo=pytz.timezone("America/New_York"))
+
+    closest = min(arrivals, key=lambda dt: abs(dt - target_dt)) if arrivals else None
+    return closest
+
 if __name__ == "__main__":
     feed = fetch_gtfs_feed()
     arrival_times = get_arrival_times(feed)
 
     print("Upcoming A train arrivals at 34th St–Penn Station (southbound):")
     for t in arrival_times:
-        print("•", t.strftime("%I:%M:%S %p"))
+        print("\u2022", t.strftime("%I:%M:%S %p"))
+
+    closest_train = find_closest_train(arrival_times, TARGET_ARRIVAL_TIME)
+
+    if closest_train:
+        leave_by = closest_train - datetime.timedelta(minutes=WALK_BUFFER_MINUTES)
+        print("\n🎯 Closest train to 9:30 AM arrives at:", closest_train.strftime("%I:%M:%S %p"))
+        print("🚶\u200d♂️ You should leave your apartment by:", leave_by.strftime("%I:%M:%S %p"))
+    else:
+        print("\n⚠️ No A train arrivals found at 34th St–Penn Station.")
