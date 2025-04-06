@@ -7,7 +7,7 @@ from dotenv import load_dotenv
 from google.transit import gtfs_realtime_pb2
 
 # Load secrets from Render's secret file mount
-load_dotenv("/etc/secrets/env")
+load_dotenv("/etc/secrets/.env")
 
 # CONFIG
 STOP_ID = "A28S"  # 34th St–Penn Station (southbound)
