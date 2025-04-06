@@ -3,7 +3,11 @@ import datetime
 import pytz
 import time
 import os
+from dotenv import load_dotenv
 from google.transit import gtfs_realtime_pb2
+
+# Load secrets from Render's secret file mount
+load_dotenv("/etc/secrets/env")
 
 # CONFIG
 STOP_ID = "A28S"  # 34th St–Penn Station (southbound)
@@ -11,7 +15,7 @@ TARGET_ROUTE = "A"
 TARGET_ARRIVAL_TIME = datetime.time(hour=9, minute=30)  # 9:30 AM
 WALK_BUFFER_MINUTES = 5
 
-# Pushover config (set this as an environment variable in Render)
+# Pushover config
 PUSHOVER_USER_KEY = os.getenv("PUSHOVER_USER_KEY")
 PUSHOVER_API_TOKEN = "uQTpK2SuT2qUvU9uWyYVLr3W2h1Nnx"  # Default public app token from Pushover for personal use
 
