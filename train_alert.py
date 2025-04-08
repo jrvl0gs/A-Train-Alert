@@ -7,13 +7,14 @@ from dotenv import load_dotenv
 from google.transit import gtfs_realtime_pb2
 
 # Load secrets from Render's secret file mount
-load_dotenv("/etc/secrets/.env")
+load_dotenv("/etc/secrets/env")
 
 # CONFIG
 STOP_ID = "A28S"  # 34th St–Penn Station (southbound)
 TARGET_ROUTE = "A"
 TARGET_ARRIVAL_TIME = datetime.time(hour=9, minute=30)  # 9:30 AM
 WALK_BUFFER_MINUTES = 5
+MAX_OFFSET_MINUTES = 10  # Only consider trains within +/- 20 minutes of target time
 
 # Pushover config
 PUSHOVER_USER_KEY = os.getenv("PUSHOVER_USER_KEY")
@@ -46,16 +47,17 @@ def get_arrival_times(feed):
 
     return sorted(arrivals)
 
-def find_closest_train(arrivals, target_time):
-    today = datetime.datetime.now(pytz.timezone("America/New_York")).date()
-    target_dt = datetime.datetime.combine(today, target_time, tzinfo=pytz.timezone("America/New_York"))
+def find_best_train_within_range(arrivals, target_time, max_offset_minutes):
+    eastern = pytz.timezone("America/New_York")
+    today = datetime.datetime.now(eastern).date()
+    target_dt = datetime.datetime.combine(today, target_time, tzinfo=eastern)
 
-    closest = min(arrivals, key=lambda dt: abs(dt - target_dt)) if arrivals else None
-    return closest
+    filtered = [dt for dt in arrivals if abs((dt - target_dt).total_seconds()) <= max_offset_minutes * 60]
+    return min(filtered, key=lambda dt: abs(dt - target_dt)) if filtered else None
 
 def send_pushover_notification(title, message):
-    if not PUSHOVER_USER_KEY:
-        print("Missing Pushover user key.")
+    if not PUSHOVER_USER_KEY or not PUSHOVER_API_TOKEN:
+        print("Missing Pushover credentials.")
         return
 
     payload = {
@@ -78,11 +80,11 @@ if __name__ == "__main__":
     for t in arrival_times:
         print("\u2022", t.strftime("%I:%M:%S %p"))
 
-    closest_train = find_closest_train(arrival_times, TARGET_ARRIVAL_TIME)
+    closest_train = find_best_train_within_range(arrival_times, TARGET_ARRIVAL_TIME, MAX_OFFSET_MINUTES)
 
     if closest_train:
         leave_by = closest_train - datetime.timedelta(minutes=WALK_BUFFER_MINUTES)
-        print("\n🎯 Closest train to 9:30 AM arrives at:", closest_train.strftime("%I:%M:%S %p"))
+        print("\n🎯 Best train near 9:30 AM arrives at:", closest_train.strftime("%I:%M:%S %p"))
         print("🚶\u200d♂️ You should leave your apartment by:", leave_by.strftime("%I:%M:%S %p"))
 
         # First notification with leave-by time
@@ -100,4 +102,4 @@ if __name__ == "__main__":
         else:
             print("\n⚠️ Leave time has already passed. Skipping reminder.")
     else:
-        print("\n⚠️ No A train arrivals found at 34th St–Penn Station.")
+        print("\n⚠️ No A train arrivals found within 20 minutes of 9:30 AM.")
