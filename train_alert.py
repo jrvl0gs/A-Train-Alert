@@ -14,7 +14,7 @@ STOP_ID = "A28S"  # 34th St–Penn Station (southbound)
 TARGET_ROUTE = "A"
 TARGET_ARRIVAL_TIME = datetime.time(hour=9, minute=30)  # 9:30 AM
 WALK_BUFFER_MINUTES = 5
-MAX_OFFSET_MINUTES = 10  # Only consider trains within +/- 20 minutes of target time
+MAX_OFFSET_MINUTES = 10  # Only consider trains within +/- 10 minutes of target time
 
 # Pushover config
 PUSHOVER_USER_KEY = os.getenv("PUSHOVER_USER_KEY")
@@ -49,10 +49,16 @@ def get_arrival_times(feed):
 
 def find_best_train_within_range(arrivals, target_time, max_offset_minutes):
     eastern = pytz.timezone("America/New_York")
-    today = datetime.datetime.now(eastern).date()
-    target_dt = datetime.datetime.combine(today, target_time, tzinfo=eastern)
+    now = datetime.datetime.now(eastern)
+    today = now.date()
+    target_dt = eastern.localize(datetime.datetime.combine(today, target_time))
 
-    filtered = [dt for dt in arrivals if abs((dt - target_dt).total_seconds()) <= max_offset_minutes * 60]
+    # Filter for trains within +/- max_offset_minutes of the 9:30 target
+    lower_bound = target_dt - datetime.timedelta(minutes=max_offset_minutes)
+    upper_bound = target_dt + datetime.timedelta(minutes=max_offset_minutes)
+
+    filtered = [dt for dt in arrivals if lower_bound <= dt <= upper_bound]
+
     return min(filtered, key=lambda dt: abs(dt - target_dt)) if filtered else None
 
 def send_pushover_notification(title, message):
@@ -102,4 +108,4 @@ if __name__ == "__main__":
         else:
             print("\n⚠️ Leave time has already passed. Skipping reminder.")
     else:
-        print("\n⚠️ No A train arrivals found within 20 minutes of 9:30 AM.")
+        print("\n⚠️ No A train arrivals found within 10 minutes of 9:30 AM.")
